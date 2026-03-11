@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tris Pro</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root { --primary: #00d1b2; --bg: #1a1a1a; --cell: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #222; padding: 25px; border-radius: 15px; width: 320px; text-align: center; border: 1px solid #444; }
+        
+        /* Punti */
+        .points-box { background: #000; padding: 10px; border-radius: 8px; margin-bottom: 20px; color: var(--primary); font-weight: bold; }
+        
+        /* Menu */
+        .menu-group { display: flex; flex-direction: column; gap: 10px; }
+        input { padding: 10px; border-radius: 5px; border: 1px solid #444; background: #111; color: white; outline: none; }
+        button { padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-main { background: var(--primary); color: #111; }
+        .btn-sec { background: #4a4a4a; color: white; }
+        
+        /* Gioco */
+        #game-screen { display: none; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0; }
+        .cell { aspect-ratio: 1; background: var(--cell); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .cell:hover { background: #444; }
+        .cell.x { color: var(--primary); }
+        .cell.o { color: #ff3860; }
+        
+        #info-line { font-size: 0.9rem; margin-bottom: 10px; color: #888; }
+        #peer-code-box { background: #000; padding: 5px; color: #4ade80; font-family: monospace; margin-bottom: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="menu">
+        <h2>TRIS</h2>
+        <div class="points-box">Punti: <span id="punti-val">0</span></div>
+        
+        <div class="menu-group">
+            <input type="text" id="username" placeholder="Tuo Nome" maxlength="10">
+            
+            <button class="btn-main" onclick="start('bot')">Sfida il BOT</button>
+            <button class="btn-sec" onclick="start('local')">2 Giocatori Locale</button>
+            
+            <hr style="width:100%; border:0; border-top:1px solid #444; margin: 10px 0;">
+            
+            <button class="btn-sec" style="background:#209cee" onclick="initOnline()">Crea Stanza Online</button>
+            <div id="peer-code-box"></div>
+            <input type="text" id="join-code" placeholder="Codice Amico">
+            <button class="btn-sec" style="background:#209cee" onclick="connectOnline()">Entra</button>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <div id="info-line">Caricamento...</div>
+        <div class="grid" id="grid">
+            <div class="cell" onclick="tap(0)"></div>
+            <div class="cell" onclick="tap(1)"></div>
+            <div class="cell" onclick="tap(2)"></div>
+            <div class="cell" onclick="tap(3)"></div>
+            <div class="cell" onclick="tap(4)"></div>
+            <div class="cell" onclick="tap(5)"></div>
+            <div class="cell" onclick="tap(6)"></div>
+            <div class="cell" onclick="tap(7)"></div>
+            <div class="cell" onclick="tap(8)"></div>
+        </div>
+        <button class="btn-sec" onclick="location.reload()">Esci</button>
+    </div>
+</div>
+
+<script>
+    let board = Array(9).fill("");
+    let turn = "X"; // X inizia sempre
+    let active = false;
+    let gameMode = "";
+    let myName = "Giocatore";
+    let enemyName = "Avversario";
+    let peer, conn, role;
+
+    // Carica punti salvati
+    let pts = parseInt(localStorage.getItem('punti_tris')) || 0;
+    document.getElementById('punti-val').innerText = pts;
+
+    function start(m) {
+        gameMode = m;
+        myName = document.getElementById('username').value || "Io";
+        if(m === 'bot') enemyName = "BOT";
+        if(m === 'local') enemyName = "O";
+        
+        document.getElementById('menu').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        active = true;
+        updateUI();
+    }
+
+    function tap(i) {
+        if(board[i] !== "" || !active) return;
+
+        if(gameMode === 'online') {
+            let isMyTurn = (role === 'host' && turn === 'X') || (role === 'guest' && turn === 'O');
+            if(!isMyTurn) return;
+            conn.send({idx: i});
+        }
+
+        place(i);
+
+        if(active && gameMode === 'bot' && turn === 'O') {
+            active = false;
+            setTimeout(botBrain, 500);
+        }
+    }
+
+    function place(i) {
+        board[i] = turn;
+        const c = document.querySelectorAll('.cell')[i];
+        c.innerText = turn;
+        c.classList.add(turn.toLowerCase());
+
+        if(checkWinner(board, turn)) {
+            let winner = (turn === 'X') ? myName : enemyName;
+            document.getElementById('info-line').innerText = winner + " vince!";
+            if(turn === 'X') saveScore();
+            active = false;
+            return;
+        }
+
+        if(!board.includes("")) {
+            document.getElementById('info-line').innerText = "Pareggio!";
+            active = false;
+            return;
+        }
+
+        turn = (turn === "X") ? "O" : "X";
+        updateUI();
+    }
+
+    function updateUI() {
+        let current = (turn === 'X') ? myName : enemyName;
+        document.getElementById('info-line').innerText = "Tocca a: " + current;
+    }
+
+    function saveScore() {
+        pts += 10;
+        localStorage.setItem('punti_tris', pts);
+        document.getElementById('punti-val').innerText = pts;
+    }
+
+    function checkWinner(b, p) {
+        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        return lines.some(l => l.every(idx => b[idx] === p));
+    }
+
+    // BOT LOGIC (Impossibile)
+    function botBrain() {
+        let best = -100, move = -1;
+        for(let i=0; i<9; i++) {
+            if(board[i]==="") {
+                board[i]="O";
+                let score = minimax(board, false);
+                board[i]="";
+                if(score > best) { best = score; move = i; }
+            }
+        }
+        active = true;
+        place(move);
+    }
+
+    function minimax(b, isMax) {
+        if(checkWinner(b, "O")) return 10;
+        if(checkWinner(b, "X")) return -10;
+        if(!b.includes("")) return 0;
+        let scores = [];
+        for(let i=0; i<9; i++) {
+            if(b[i]==="") {
+                b[i] = isMax ? "O" : "X";
+                scores.push(minimax(b, !isMax));
+                b[i] = "";
+            }
+        }
+        return isMax ? Math.max(...scores) : Math.min(...scores);
+    }
+
+    // ONLINE LOGIC
+    function initOnline() {
+        const id = Math.random().toString(36).substring(2, 7).toUpperCase();
+        peer = new Peer(id);
+        peer.on('open', code => {
+            const box = document.getElementById('peer-code-box');
+            box.innerText = "CODICE: " + code;
+            box.style.display = 'block';
+        });
+        peer.on('connection', c => {
+            conn = c; role = 'host';
+            conn.on('open', () => { conn.send({n: myName}); start('online'); });
+            conn.on('data', d => handleData(d));
+        });
+        peer.on('error', () => alert("Errore connessione. Riprova."));
+    }
+
+    function connectOnline() {
+        const target = document.getElementById('join-code').value.toUpperCase();
+        if(!target) return;
+        peer = new Peer();
+        peer.on('open', () => {
+            conn = peer.connect(target);
+            role = 'guest';
+            conn.on('open', () => { conn.send({n: myName}); start('online'); });
+            conn.on('data', d => handleData(d));
+        });
+    }
+
+    function handleData(d) {
+        if(d.n) { enemyName = d.n; updateUI(); }
+        if(d.idx !== undefined) place(d.idx);
+    }
+</script>
+</body>
+</html>
