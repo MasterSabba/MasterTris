@@ -3,218 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tris Pro - Fix Online</title>
+    <title>Tris Neon 3D</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #1a0633; --card: #2d0a4e; --yellow: #ffd700; --cell: #3b1263; --text: #fff; --win: #4ade80; --lose: #f43f5e; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .container { background: var(--card); padding: 25px; border-radius: 24px; width: 320px; text-align: center; border: 2px solid rgba(255,215,0,0.3); position: relative; }
-        .hidden { display: none !important; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--yellow); background: #1a0633; color: #fff; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; margin: 5px 0; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--yellow); color: var(--bg); transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-        .btn-outline { background: transparent; border: 2px solid var(--yellow); color: var(--yellow); }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0; }
-        .cell { aspect-ratio: 1; background: var(--cell); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border-radius: 12px; cursor: pointer; color: var(--yellow); }
-        #peer-box { background: #000; color: #00ff88; padding: 10px; border-radius: 8px; font-family: monospace; margin: 10px 0; border: 1px solid #00ff88; font-size: 1.1rem; }
-        #result-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); border-radius: 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        :root { 
+            --bg: #120024; --card: #1d003d; --yellow: #ffeb3b; 
+            --neon-g: #39ff14; --neon-r: #ff3131; --p: #7b2cbf;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #fff; 
+            display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden;
+        }
+
+        .container { 
+            background: var(--card); width: 340px; padding: 30px; border-radius: 25px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(123, 44, 191, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1); position: relative;
+        }
+
+        h1 { font-size: 2.5rem; margin-bottom: 20px; text-shadow: 0 0 10px var(--yellow); color: var(--yellow); }
+        .hidden { display: none !important; pointer-events: none !important; }
+
+        input { 
+            width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: none;
+            background: #0f001d; color: #fff; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); box-sizing: border-box;
+        }
+
+        button { 
+            width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 15px;
+            font-weight: bold; cursor: pointer; font-size: 1rem; text-transform: uppercase;
+            background: linear-gradient(145deg, #ffeb3b, #d4c100); color: #120024;
+            box-shadow: 0 5px 0 #9e8e00, 0 8px 15px rgba(0,0,0,0.4); transition: 0.1s;
+            position: relative; z-index: 5;
+        }
+        button:active { transform: translateY(4px); box-shadow: 0 1px 0 #9e8e00; }
+        .btn-sec { background: linear-gradient(145deg, #3d0066, #2d004d); color: var(--yellow); box-shadow: 0 5px 0 #1a0033; }
+
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+        .cell { 
+            aspect-ratio: 1; background: #2a0052; border-radius: 15px; display: flex;
+            align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 0 #1a0033; cursor: pointer;
+        }
+
+        #result-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(18, 0, 36, 0.95); border-radius: 25px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+        }
+        .res-win { color: var(--neon-g); text-shadow: 0 0 20px var(--neon-g); font-size: 2.2rem; text-transform: uppercase; }
+        .res-lose { color: var(--neon-r); text-shadow: 0 0 20px var(--neon-r); font-size: 2.2rem; text-transform: uppercase; }
+
+        #code-box { background: #000; color: var(--neon-g); padding: 15px; border-radius: 10px; font-family: monospace; border: 1px dashed var(--neon-g); margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="result-overlay" class="hidden">
-        <h2 id="result-title" style="font-size: 2rem;"></h2>
-        <button onclick="rematch()" style="width:70%">RIGIOCA</button>
-        <button class="btn-outline" onclick="resetApp()" style="width:70%">MENU</button>
+    <div id="result-screen" class="hidden">
+        <h2 id="res-txt">HAI VINTO</h2>
+        <button onclick="rematch()" style="width: 80%">RIGIOCA</button>
+        <button class="btn-sec" onclick="location.reload()" style="width: 80%">MENU</button>
     </div>
 
-    <div id="view-main">
-        <h1 style="color: var(--yellow)">TRIS</h1>
-        <div style="color: var(--yellow); margin-bottom: 15px;">Punti: <span id="val-pts">0</span></div>
-        <input type="text" id="inp-name" placeholder="Tuo Nome" maxlength="10">
-        <button onclick="goBot('easy')">BOT FACILE</button>
-        <button onclick="goBot('hard')">BOT IMPOSSIBILE</button>
-        <button class="btn-outline" onclick="switchView('view-multi')">MULTIPLAYER</button>
+    <div id="p-home">
+        <h1>TRIS</h1>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
+        <input type="text" id="nick" placeholder="Tuo Nickname">
+        <button onclick="nav('p-bot')">SFIDA IL BOT</button>
+        <button onclick="nav('p-multi')">MULTIPLAYER</button>
     </div>
 
-    <div id="view-multi" class="hidden">
+    <div id="p-bot" class="hidden">
+        <h1>BOT</h1>
+        <button onclick="startBot('easy')">FACILE (Sbaglia)</button>
+        <button onclick="startBot('med')">MEDIA (Normale)</button>
+        <button onclick="startBot('hard')">DIFFICILE (Impossibile)</button>
+        <button class="btn-sec" onclick="nav('p-home')">INDIETRO</button>
+    </div>
+
+    <div id="p-multi" class="hidden">
+        <h1>MULTI</h1>
+        <button onclick="nav('p-local-setup')">STESSO DISPOSITIVO</button>
+        <button onclick="nav('p-friends')">AMICI (Online)</button>
+        <button class="btn-sec" onclick="nav('p-home')">INDIETRO</button>
+    </div>
+
+    <div id="p-local-setup" class="hidden">
+        <h1>AMICO</h1>
+        <input type="text" id="friend-nick" placeholder="Nickname Amico">
+        <button onclick="startLocal()">GIOCA ORA</button>
+        <button class="btn-sec" onclick="nav('p-multi')">INDIETRO</button>
+    </div>
+
+    <div id="p-friends" class="hidden">
         <h1>ONLINE</h1>
-        <button onclick="switchView('view-local-setup')">STESSO IPAD</button>
-        <hr style="opacity:0.2; margin:15px 0;">
-        
-        <button id="btn-create" onclick="hostStanza()">CREA STANZA (Host)</button>
-        <div id="peer-box" class="hidden">GENERO CODICE...</div>
-        
-        <p style="font-size: 0.8rem; opacity: 0.6;">OPPURE</p>
-        
-        <input type="text" id="inp-code" placeholder="Incolla Codice Amico">
-        <button onclick="joinStanza()">ENTRA (Partecipa)</button>
-        
-        <button class="btn-outline" onclick="switchView('view-main')" style="margin-top:10px">INDIETRO</button>
+        <button onclick="createRoom()">CREA CODICE</button>
+        <div id="code-box" class="hidden">...</div>
+        <input type="text" id="join-id" placeholder="Incolla Codice">
+        <button onclick="joinRoom()">ENTRA</button>
+        <button class="btn-sec" onclick="nav('p-multi')">INDIETRO</button>
     </div>
 
-    <div id="view-local-setup" class="hidden">
-        <h1>NOMI IPAD</h1>
-        <input type="text" id="p1-loc" placeholder="Nome Giocatore X" value="Giocatore X">
-        <input type="text" id="p2-loc" placeholder="Nome Giocatore O" value="Giocatore O">
-        <button onclick="startLocal()">INIZIA</button>
-        <button class="btn-outline" onclick="switchView('view-multi')">INDIETRO</button>
-    </div>
-
-    <div id="view-game" class="hidden">
-        <div id="status" style="color: var(--yellow); font-weight: bold; margin-bottom:10px;"></div>
+    <div id="p-game" class="hidden">
+        <div id="status" style="color: var(--yellow); font-weight: bold; margin-bottom: 10px;"></div>
         <div class="grid">
             <div class="cell" onclick="tap(0)"></div><div class="cell" onclick="tap(1)"></div><div class="cell" onclick="tap(2)"></div>
             <div class="cell" onclick="tap(3)"></div><div class="cell" onclick="tap(4)"></div><div class="cell" onclick="tap(5)"></div>
             <div class="cell" onclick="tap(6)"></div><div class="cell" onclick="tap(7)"></div><div class="cell" onclick="tap(8)"></div>
         </div>
-        <button class="btn-outline" onclick="resetApp()">ESCI</button>
+        <button class="btn-sec" onclick="location.reload()">ESCI</button>
     </div>
 </div>
 
 <script>
-    let board = Array(9).fill("");
-    let turn = "X", active = false, mode = "", botDiff = "hard";
-    let p1 = "X", p2 = "O", peer, conn, role;
+    let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
+    let p1 = "", p2 = "", peer, conn, role, mySymbol = "X";
 
+    document.getElementById('nick').value = localStorage.getItem('tris_nick') || "";
     let score = parseInt(localStorage.getItem('tris_score')) || 0;
-    document.getElementById('val-pts').innerText = score;
+    document.getElementById('pts').innerText = score;
 
-    function switchView(id) {
-        document.querySelectorAll('.container > div').forEach(d => { if(d.id!=='result-overlay') d.classList.add('hidden'); });
+    function nav(id) {
+        document.querySelectorAll('.container > div').forEach(d => { if(d.id!=='result-screen') d.classList.add('hidden'); });
         document.getElementById(id).classList.remove('hidden');
+        if(id === 'p-home') localStorage.setItem('tris_nick', document.getElementById('nick').value);
     }
 
-    function resetApp() {
-        if(peer) peer.destroy();
-        document.getElementById('result-overlay').classList.add('hidden');
-        document.getElementById('peer-box').classList.add('hidden');
-        board = Array(9).fill(""); turn = "X";
+    function startBot(d) {
+        botDiff = d; mode = 'bot';
+        p1 = document.getElementById('nick').value || "Player";
+        p2 = "BOT";
+        setupGame();
+    }
+
+    function startLocal() {
+        mode = 'local';
+        p1 = document.getElementById('nick').value || "Giocatore 1";
+        p2 = document.getElementById('friend-nick').value || "Giocatore 2";
+        setupGame();
+    }
+
+    function setupGame() {
+        board.fill("");
         document.querySelectorAll('.cell').forEach(c => c.innerText = "");
-        switchView('view-main');
+        if(Math.random() > 0.5) { [p1, p2] = [p2, p1]; }
+        nav('p-game'); active = true; turn = "X"; updateStatus();
     }
-
-    function rematch() {
-        board = Array(9).fill(""); turn = "X";
-        document.querySelectorAll('.cell').forEach(c => c.innerText = "");
-        document.getElementById('result-overlay').classList.add('hidden');
-        active = true; updateStatus();
-    }
-
-    // --- LOGICA ONLINE (FIXED) ---
-    function hostStanza() {
-        const btn = document.getElementById('btn-create');
-        const box = document.getElementById('peer-box');
-        btn.classList.add('hidden');
-        box.classList.remove('hidden');
-        box.innerText = "Connessione...";
-
-        peer = new Peer(); // PeerJS genererà un ID automatico univoco
-        peer.on('open', id => {
-            box.innerText = "CODICE: " + id;
-        });
-
-        peer.on('connection', c => {
-            conn = c; role = 'host'; mode = 'online';
-            conn.on('open', () => {
-                p1 = document.getElementById('inp-name').value || "Host";
-                conn.send({type: 'name', name: p1});
-                switchView('view-game'); active = true; updateStatus();
-            });
-            conn.on('data', data => handleData(data));
-        });
-        
-        peer.on('error', err => { alert("Errore Peer: " + err.type); resetApp(); });
-    }
-
-    function joinStanza() {
-        const code = document.getElementById('inp-code').value.trim();
-        if(!code) return alert("Inserisci il codice!");
-
-        peer = new Peer();
-        peer.on('open', () => {
-            conn = peer.connect(code);
-            role = 'guest'; mode = 'online';
-            conn.on('open', () => {
-                p2 = document.getElementById('inp-name').value || "Guest";
-                conn.send({type: 'name', name: p2});
-                switchView('view-game'); active = true; updateStatus();
-            });
-            conn.on('data', data => handleData(data));
-        });
-        peer.on('error', err => { alert("Codice errato o scaduto!"); resetApp(); });
-    }
-
-    function handleData(data) {
-        if(data.type === 'name') { if(role === 'host') p2 = data.name; else p1 = data.name; updateStatus(); }
-        if(data.type === 'move') place(data.idx);
-    }
-
-    // --- GIOCO ---
-    function goBot(d) { mode = 'bot'; botDiff = d; p1 = document.getElementById('inp-name').value || "Io"; p2 = "BOT"; switchView('view-game'); active = true; updateStatus(); }
-    function startLocal() { mode = 'local'; p1 = document.getElementById('p1-loc').value; p2 = document.getElementById('p2-loc').value; switchView('view-game'); active = true; updateStatus(); }
 
     function tap(i) {
         if(board[i] !== "" || !active) return;
         if(mode === 'online') {
-            const myTurn = (role==='host' && turn==='X') || (role==='guest' && turn==='O');
-            if(!myTurn) return;
-            conn.send({type: 'move', idx: i});
+            if(turn !== mySymbol) return;
+            conn.send({i: i});
         }
-        place(i);
-        if(active && mode === 'bot' && turn === 'O') { active = false; setTimeout(botLogic, 500); }
+        move(i);
+        if(active && mode === 'bot' && turn === (p2 === "BOT" ? "O" : "X")) {
+            active = false; setTimeout(botLogic, 600);
+        }
     }
 
-    function place(i) {
+    function move(i) {
         board[i] = turn;
         document.querySelectorAll('.cell')[i].innerText = turn;
-        if(checkWin(board, turn)) { endGame(turn); return; }
+        document.querySelectorAll('.cell')[i].style.color = turn === 'X' ? '#fff' : 'var(--yellow)';
+        
+        if(checkWin(board, turn)) {
+            endGame(turn); return;
+        }
         if(!board.includes("")) { endGame('tie'); return; }
+        
         turn = (turn === "X") ? "O" : "X";
         updateStatus();
     }
 
+    function updateStatus() {
+        document.getElementById('status').innerText = "Tocca a: " + (turn === "X" ? p1 : p2);
+    }
+
+    function checkWin(b, p) {
+        return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].some(l => l.every(x => b[x]===p));
+    }
+
     function endGame(winner) {
         active = false;
-        const ov = document.getElementById('result-overlay');
-        const tt = document.getElementById('result-title');
-        ov.classList.remove('hidden');
+        const res = document.getElementById('result-screen');
+        const txt = document.getElementById('res-txt');
+        res.classList.remove('hidden');
 
-        if(winner === 'tie') { tt.innerText = "PAREGGIO!"; tt.className = ""; }
-        else {
-            let winName = (winner === 'X') ? p1 : p2;
-            tt.innerText = winName + "\nVINCE!";
-            
-            // Punti solo se vinci contro Bot o Online
-            if(mode !== 'local') {
-                const iWon = (mode === 'bot' && winner === 'X') || (mode === 'online' && ((role==='host' && winner==='X') || (role==='guest' && winner==='O')));
-                if(iWon) { tt.className = "win-text"; score += 10; localStorage.setItem('tris_score', score); document.getElementById('val-pts').innerText = score; }
-                else { tt.className = "lose-text"; }
-            } else { tt.className = "win-text"; }
-        }
-    }
-
-    function updateStatus() { document.getElementById('status').innerText = "Tocca a: " + (turn==='X' ? p1 : p2); }
-    function checkWin(b, p) { return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].some(l => l.every(idx => b[idx]===p)); }
-
-    // --- BOT LOGIC ---
-    function botLogic() {
-        let move = -1;
-        if(botDiff === 'easy') {
-            let empties = board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
-            move = empties[Math.floor(Math.random() * empties.length)];
+        if(winner === 'tie') { 
+            txt.innerText = "PAREGGIO"; 
+            txt.className = ""; 
         } else {
-            let best = -100;
-            for(let i=0; i<9; i++) { if(board[i]==="") { board[i]="O"; let s = minimax(board, false); board[i]=""; if(s > best) { best = s; move = i; } } }
+            let winName = (winner === 'X') ? p1 : p2;
+            let userNick = localStorage.getItem('tris_nick') || "Player";
+
+            // Se è lo stesso dispositivo, mostra il nome del vincitore
+            if(mode === 'local') {
+                txt.innerText = winName + " VINCE!";
+                txt.className = "res-win";
+            } else {
+                // Se è bot o online, usa Hai Vinto/Hai Perso
+                if(winName === userNick) {
+                    txt.innerText = "HAI VINTO";
+                    txt.className = "res-win";
+                    score += 10;
+                    localStorage.setItem('tris_score', score);
+                    document.getElementById('pts').innerText = score;
+                } else {
+                    txt.innerText = "HAI PERSO";
+                    txt.className = "res-lose";
+                }
+            }
         }
-        active = true; place(move);
     }
-    function minimax(b, isMax) {
+
+    function rematch() {
+        document.getElementById('result-screen').classList.add('hidden');
+        setupGame();
+    }
+
+    function botLogic() {
+        let m = -1;
+        if(botDiff === 'easy') {
+            let e = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+            m = e[Math.floor(Math.random()*e.length)];
+        } else if(botDiff === 'med') {
+            m = Math.random() > 0.4 ? getBestMove() : -1;
+            if(m === -1) {
+                let e = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+                m = e[Math.floor(Math.random()*e.length)];
+            }
+        } else { m = getBestMove(); }
+        active = true; move(m);
+    }
+
+    function getBestMove() {
+        let b = -100, m = -1;
+        for(let i=0; i<9; i++) {
+            if(board[i]==="") {
+                board[i]="O"; let s = minimax(board, 0, false); board[i]="";
+                if(s > b) { b = s; m = i; }
+            }
+        }
+        return m;
+    }
+
+    function minimax(b, d, isM) {
         if(checkWin(b, "O")) return 10; if(checkWin(b, "X")) return -10; if(!b.includes("")) return 0;
         let scores = [];
-        for(let i=0; i<9; i++) if(b[i]==="") { b[i]=isMax?"O":"X"; scores.push(minimax(b, !isMax)); b[i]=""; }
-        return isMax ? Math.max(...scores) : Math.min(...scores);
+        for(let i=0; i<9; i++) {
+            if(b[i]==="") { b[i]=isM?"O":"X"; scores.push(minimax(b, d+1, !isM)); b[i]=""; }
+        }
+        return isM ? Math.max(...scores) : Math.min(...scores);
+    }
+
+    function createRoom() {
+        const id = Math.random().toString(36).substring(2, 7).toUpperCase();
+        peer = new Peer(id);
+        peer.on('open', () => {
+            const box = document.getElementById('code-box');
+            box.innerText = "CODICE: " + id; box.classList.remove('hidden');
+        });
+        peer.on('connection', c => {
+            conn = c; role = 'host'; mode = 'online'; mySymbol = "X";
+            conn.on('open', () => {
+                p1 = document.getElementById('nick').value || "Host";
+                conn.send({n: p1}); nav('p-game'); active = true; turn="X"; updateStatus();
+            });
+            conn.on('data', d => { if(d.n) p2 = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
+        });
+    }
+
+    function joinRoom() {
+        const id = document.getElementById('join-id').value.toUpperCase();
+        peer = new Peer();
+        peer.on('open', () => {
+            conn = peer.connect(id); role = 'guest'; mode = 'online'; mySymbol = "O";
+            conn.on('open', () => {
+                p2 = document.getElementById('nick').value || "Guest";
+                conn.send({n: p2}); nav('p-game'); active = true; turn="X"; updateStatus();
+            });
+            conn.on('data', d => { if(d.n) p1 = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
+        });
     }
 </script>
 </body>
