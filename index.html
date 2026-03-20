@@ -52,8 +52,8 @@
             background: rgba(18, 0, 36, 0.95); border-radius: 25px;
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
         }
-        .res-win { color: var(--neon-g); text-shadow: 0 0 20px var(--neon-g); font-size: 2.2rem; text-transform: uppercase; }
-        .res-lose { color: var(--neon-r); text-shadow: 0 0 20px var(--neon-r); font-size: 2.2rem; text-transform: uppercase; }
+        .res-win { color: var(--neon-g); text-shadow: 0 0 20px var(--neon-g); font-size: 2rem; text-transform: uppercase; padding: 0 10px; }
+        .res-lose { color: var(--neon-r); text-shadow: 0 0 20px var(--neon-r); font-size: 2rem; text-transform: uppercase; }
 
         #code-box { background: #000; color: var(--neon-g); padding: 15px; border-radius: 10px; font-family: monospace; border: 1px dashed var(--neon-g); margin: 10px 0; }
     </style>
@@ -77,9 +77,9 @@
 
     <div id="p-bot" class="hidden">
         <h1>BOT</h1>
-        <button onclick="startBot('easy')">FACILE (Sbaglia)</button>
-        <button onclick="startBot('med')">MEDIA (Normale)</button>
-        <button onclick="startBot('hard')">DIFFICILE (Impossibile)</button>
+        <button onclick="startBot('easy')">FACILE</button>
+        <button onclick="startBot('med')">MEDIA</button>
+        <button onclick="startBot('hard')">DIFFICILE</button>
         <button class="btn-sec" onclick="nav('p-home')">INDIETRO</button>
     </div>
 
@@ -119,7 +119,7 @@
 
 <script>
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
-    let p1 = "", p2 = "", peer, conn, role, mySymbol = "X";
+    let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
     document.getElementById('nick').value = localStorage.getItem('tris_nick') || "";
     let score = parseInt(localStorage.getItem('tris_score')) || 0;
@@ -133,22 +133,29 @@
 
     function startBot(d) {
         botDiff = d; mode = 'bot';
-        p1 = document.getElementById('nick').value || "Player";
-        p2 = "BOT";
+        p1_orig = document.getElementById('nick').value || "Player";
+        p2_orig = "BOT";
         setupGame();
     }
 
     function startLocal() {
         mode = 'local';
-        p1 = document.getElementById('nick').value || "Giocatore 1";
-        p2 = document.getElementById('friend-nick').value || "Giocatore 2";
+        p1_orig = document.getElementById('nick').value || "Giocatore 1";
+        p2_orig = document.getElementById('friend-nick').value || "Giocatore 2";
         setupGame();
     }
 
     function setupGame() {
         board.fill("");
         document.querySelectorAll('.cell').forEach(c => c.innerText = "");
-        if(Math.random() > 0.5) { [p1, p2] = [p2, p1]; }
+        
+        // Decidiamo a caso chi è X e chi è O senza sovrascrivere i nomi originali
+        if(Math.random() > 0.5) {
+            pX = p1_orig; pO = p2_orig;
+        } else {
+            pX = p2_orig; pO = p1_orig;
+        }
+
         nav('p-game'); active = true; turn = "X"; updateStatus();
     }
 
@@ -159,7 +166,9 @@
             conn.send({i: i});
         }
         move(i);
-        if(active && mode === 'bot' && turn === (p2 === "BOT" ? "O" : "X")) {
+        // Turno del bot
+        let botName = (pX === "BOT") ? "X" : "O";
+        if(active && mode === 'bot' && turn === botName) {
             active = false; setTimeout(botLogic, 600);
         }
     }
@@ -179,7 +188,8 @@
     }
 
     function updateStatus() {
-        document.getElementById('status').innerText = "Tocca a: " + (turn === "X" ? p1 : p2);
+        let currentName = (turn === "X") ? pX : pO;
+        document.getElementById('status').innerText = "Tocca a: " + currentName;
     }
 
     function checkWin(b, p) {
@@ -196,17 +206,15 @@
             txt.innerText = "PAREGGIO"; 
             txt.className = ""; 
         } else {
-            let winName = (winner === 'X') ? p1 : p2;
+            let winName = (winner === 'X') ? pX : pO;
             let userNick = localStorage.getItem('tris_nick') || "Player";
 
-            // Se è lo stesso dispositivo, mostra il nome del vincitore
             if(mode === 'local') {
-                txt.innerText = winName + " VINCE!";
+                txt.innerText = "👑 " + winName + " VINCE!";
                 txt.className = "res-win";
             } else {
-                // Se è bot o online, usa Hai Vinto/Hai Perso
                 if(winName === userNick) {
-                    txt.innerText = "HAI VINTO";
+                    txt.innerText = "👑 HAI VINTO";
                     txt.className = "res-win";
                     score += 10;
                     localStorage.setItem('tris_score', score);
@@ -224,39 +232,43 @@
         setupGame();
     }
 
+    // --- BOT LOGIC ---
     function botLogic() {
         let m = -1;
+        let botSymbol = (pX === "BOT") ? "X" : "O";
+        let playerSymbol = (botSymbol === "X") ? "O" : "X";
+
         if(botDiff === 'easy') {
             let e = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
             m = e[Math.floor(Math.random()*e.length)];
         } else if(botDiff === 'med') {
-            m = Math.random() > 0.4 ? getBestMove() : -1;
+            m = Math.random() > 0.4 ? getBestMove(botSymbol, playerSymbol) : -1;
             if(m === -1) {
                 let e = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
                 m = e[Math.floor(Math.random()*e.length)];
             }
-        } else { m = getBestMove(); }
+        } else { m = getBestMove(botSymbol, playerSymbol); }
         active = true; move(m);
     }
 
-    function getBestMove() {
+    function getBestMove(botS, playS) {
         let b = -100, m = -1;
         for(let i=0; i<9; i++) {
             if(board[i]==="") {
-                board[i]="O"; let s = minimax(board, 0, false); board[i]="";
+                board[i]=botS; let s = minimax(board, 0, false, botS, playS); board[i]="";
                 if(s > b) { b = s; m = i; }
             }
         }
         return m;
     }
 
-    function minimax(b, d, isM) {
-        if(checkWin(b, "O")) return 10; if(checkWin(b, "X")) return -10; if(!b.includes("")) return 0;
-        let scores = [];
+    function minimax(b, d, isM, botS, playS) {
+        if(checkWin(b, botS)) return 10; if(checkWin(b, playS)) return -10; if(!b.includes("")) return 0;
+        let scs = [];
         for(let i=0; i<9; i++) {
-            if(b[i]==="") { b[i]=isM?"O":"X"; scores.push(minimax(b, d+1, !isM)); b[i]=""; }
+            if(b[i]==="") { b[i]=isM?botS:playS; scs.push(minimax(b, d+1, !isM, botS, playS)); b[i]=""; }
         }
-        return isM ? Math.max(...scores) : Math.min(...scores);
+        return isM ? Math.max(...scs) : Math.min(...scs);
     }
 
     function createRoom() {
@@ -269,10 +281,10 @@
         peer.on('connection', c => {
             conn = c; role = 'host'; mode = 'online'; mySymbol = "X";
             conn.on('open', () => {
-                p1 = document.getElementById('nick').value || "Host";
-                conn.send({n: p1}); nav('p-game'); active = true; turn="X"; updateStatus();
+                pX = document.getElementById('nick').value || "Host";
+                conn.send({n: pX}); nav('p-game'); active = true; turn="X"; updateStatus();
             });
-            conn.on('data', d => { if(d.n) p2 = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
+            conn.on('data', d => { if(d.n) pO = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
         });
     }
 
@@ -282,10 +294,10 @@
         peer.on('open', () => {
             conn = peer.connect(id); role = 'guest'; mode = 'online'; mySymbol = "O";
             conn.on('open', () => {
-                p2 = document.getElementById('nick').value || "Guest";
-                conn.send({n: p2}); nav('p-game'); active = true; turn="X"; updateStatus();
+                pO = document.getElementById('nick').value || "Guest";
+                conn.send({n: pO}); nav('p-game'); active = true; turn="X"; updateStatus();
             });
-            conn.on('data', d => { if(d.n) p1 = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
+            conn.on('data', d => { if(d.n) pX = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
         });
     }
 </script>
