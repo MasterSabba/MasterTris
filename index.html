@@ -124,6 +124,7 @@
 
     document.getElementById('nick').value = localStorage.getItem('tris_nick') || "";
     let score = parseInt(localStorage.getItem('tris_score')) || 0;
+    localStorage.setItem('points_mastertris', score); // Sincronizza con l'Hub all'avvio
     document.getElementById('pts').innerText = score;
 
     function nav(id) {
@@ -219,6 +220,7 @@
                     txt.className = "res-win";
                     score += 10;
                     localStorage.setItem('tris_score', score);
+                    localStorage.setItem('points_mastertris', score); // Sincronizza con l'Hub
                     document.getElementById('pts').innerText = score;
                 } else {
                     txt.innerText = "HAI PERSO";
