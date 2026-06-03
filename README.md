@@ -1,6 +1,6 @@
 # MasterTris
 
-MasterMurder è un gioco ispirato al classico Tris con una veste neon e modalità multiple: sfida contro bot, partita locale sullo stesso dispositivo o multiplayer online tramite connessione peer-to-peer.
+MasterTris è un gioco ispirato al classico Tris con una veste neon e modalità multiple: sfida contro bot, partita locale sullo stesso dispositivo o multiplayer online tramite connessione peer-to-peer.
 
 Il gioco include:
 - Modalità contro bot (facile, media, difficile con Minimax)
