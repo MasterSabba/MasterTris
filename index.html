@@ -124,26 +124,29 @@
 
     document.getElementById('nick').value = localStorage.getItem('tris_nick') || "";
     let score = parseInt(localStorage.getItem('tris_score')) || 0;
-    localStorage.setItem('points_mastertris', score); // Sincronizza con l'Hub all'avvio
+    localStorage.setItem('points_mastertris', score); 
     document.getElementById('pts').innerText = score;
 
     function nav(id) {
         document.querySelectorAll('.container > div').forEach(d => { if(d.id!=='result-screen') d.classList.add('hidden'); });
         document.getElementById(id).classList.remove('hidden');
-        if(id === 'p-home') localStorage.setItem('tris_nick', document.getElementById('nick').value);
+        if(id === 'p-home') {
+            let currentNick = document.getElementById('nick').value.trim();
+            if(currentNick) localStorage.setItem('tris_nick', currentNick);
+        }
     }
 
     function startBot(d) {
         botDiff = d; mode = 'bot';
-        p1_orig = document.getElementById('nick').value || "Player";
+        p1_orig = document.getElementById('nick').value.trim() || "Player";
         p2_orig = "BOT";
         setupGame();
     }
 
     function startLocal() {
         mode = 'local';
-        p1_orig = document.getElementById('nick').value || "Giocatore 1";
-        p2_orig = document.getElementById('friend-nick').value || "Giocatore 2";
+        p1_orig = document.getElementById('nick').value.trim() || "Giocatore 1";
+        p2_orig = document.getElementById('friend-nick').value.trim() || "Giocatore 2";
         setupGame();
     }
 
@@ -151,14 +154,20 @@
         board.fill("");
         document.querySelectorAll('.cell').forEach(c => c.innerText = "");
         
-        // Decidiamo a caso chi è X e chi è O senza sovrascrivere i nomi originali
         if(Math.random() > 0.5) {
             pX = p1_orig; pO = p2_orig;
+            mySymbol = "X"; 
         } else {
             pX = p2_orig; pO = p1_orig;
+            mySymbol = "O"; 
         }
 
         nav('p-game'); active = true; turn = "X"; updateStatus();
+
+        if(mode === 'bot' && pX === "BOT") {
+            active = false; 
+            setTimeout(botLogic, 600);
+        }
     }
 
     function tap(i) {
@@ -168,7 +177,7 @@
             conn.send({i: i});
         }
         move(i);
-        // Turno del bot
+        
         let botName = (pX === "BOT") ? "X" : "O";
         if(active && mode === 'bot' && turn === botName) {
             active = false; setTimeout(botLogic, 600);
@@ -209,18 +218,17 @@
             txt.className = ""; 
         } else {
             let winName = (winner === 'X') ? pX : pO;
-            let userNick = localStorage.getItem('tris_nick') || "Player";
 
             if(mode === 'local') {
                 txt.innerText = "👑 " + winName + " VINCE!";
                 txt.className = "res-win";
             } else {
-                if(winName === userNick) {
+                if(winner === mySymbol) {
                     txt.innerText = "👑 HAI VINTO";
                     txt.className = "res-win";
                     score += 10;
                     localStorage.setItem('tris_score', score);
-                    localStorage.setItem('points_mastertris', score); // Sincronizza con l'Hub
+                    localStorage.setItem('points_mastertris', score); 
                     document.getElementById('pts').innerText = score;
                 } else {
                     txt.innerText = "HAI PERSO";
@@ -235,10 +243,11 @@
         setupGame();
     }
 
-    // --- BOT LOGIC ---
     function botLogic() {
-        let m = -1;
         let botSymbol = (pX === "BOT") ? "X" : "O";
+        if (turn !== botSymbol) return; 
+
+        let m = -1;
         let playerSymbol = (botSymbol === "X") ? "O" : "X";
 
         if(botDiff === 'easy') {
@@ -284,7 +293,7 @@
         peer.on('connection', c => {
             conn = c; role = 'host'; mode = 'online'; mySymbol = "X";
             conn.on('open', () => {
-                pX = document.getElementById('nick').value || "Host";
+                pX = document.getElementById('nick').value.trim() || "Host";
                 conn.send({n: pX}); nav('p-game'); active = true; turn="X"; updateStatus();
             });
             conn.on('data', d => { if(d.n) pO = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
@@ -297,7 +306,7 @@
         peer.on('open', () => {
             conn = peer.connect(id); role = 'guest'; mode = 'online'; mySymbol = "O";
             conn.on('open', () => {
-                pO = document.getElementById('nick').value || "Guest";
+                pO = document.getElementById('nick').value.trim() || "Guest";
                 conn.send({n: pO}); nav('p-game'); active = true; turn="X"; updateStatus();
             });
             conn.on('data', d => { if(d.n) pX = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
