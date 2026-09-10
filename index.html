@@ -165,7 +165,21 @@ function registraVittoria() {
             localStorage.setItem('tris_nick', name);
         }
     }
+// Da inserire esclusivamente quando il giocatore umano vince la partita
+function inviaVittoriaAdArcade() {
+    const winPayload = {
+        type: 'GAME_WIN',
+        gameKey: 'master-tris' // Sostituisci con la chiave del gioco specifico
+    };
 
+    // Invia il messaggio sia alla finestra padre (se in iframe) sia alla finestra di provenienza (opener)
+    if (window.opener) {
+        window.opener.postMessage(winPayload, '*');
+    }
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage(winPayload, '*');
+    }
+}
     function syncScoreWithHub() {
         let arcadeData = JSON.parse(localStorage.getItem('mastersabba_arcade_v2'));
         if (arcadeData && arcadeData.winsPerGame && arcadeData.winsPerGame['Tris Battle']) {
