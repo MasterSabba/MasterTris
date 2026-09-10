@@ -120,7 +120,7 @@
 </div>
 
 <script>
-    // Dichiarazione globale per la comunicazione con l'hub principale
+    // 1. Definiamo PRIMA la funzione di vittoria per l'arcade
     function triggerGameVictory(gameKey) {
         try {
             if (window.opener && typeof window.opener.triggerGameWin === 'function') {
@@ -136,6 +136,7 @@
         localStorage.setItem('points_' + gameKey, currentScore + 10);
     }
 
+    // 2. Variabili di gioco
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
     let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
