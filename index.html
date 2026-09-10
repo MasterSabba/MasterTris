@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- INTEGRAZIONE HUB ARCADE - Da inserire nei singoli giochi -->
+<script>
+// 1. Funzione da chiamare quando il giocatore vince la partita
+function triggerGameVictory(gameKey) {
+    if (window.opener && typeof window.opener.triggerGameWin === 'function') {
+        window.opener.triggerGameWin(gameKey);
+    } else if (window.parent && typeof window.parent.triggerGameWin === 'function') {
+        window.parent.triggerGameWin(gameKey);
+    }
+}
+
+// 2. Lettura automatica del nome utente dall'URL dell'Hub
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const playerName = urlParams.get('player');
+    if (playerName && typeof setPlayerName === 'function') {
+        setPlayerName(playerName);
+    }
+});
+</script>
+
     <a href="https://mastersabba.github.io/MasterSabba/" target="_self" style="position: fixed; top: 10px; left: 10px; z-index: 9999; text-decoration: none; color: rgba(255, 255, 255, 0.2); font-family: sans-serif; font-size: 24px; padding: 10px; transition: color 0.3s ease;">✕</a>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
