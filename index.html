@@ -5,32 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tris Neon 3D</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script>
-        // Eseguito subito per catturare l'URL prima che serva
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const playerName = urlParams.get('player');
-            if (playerName && typeof setPlayerName === 'function') {
-                setPlayerName(playerName);
-            }
-        });
-
-        // Funzione universale di vittoria
-        function triggerGameVictory(gameKey) {
-            try {
-                if (window.opener && typeof window.opener.triggerGameWin === 'function') {
-                    window.opener.triggerGameWin(gameKey);
-                } else if (window.parent && typeof window.parent.triggerGameWin === 'function') {
-                    window.parent.triggerGameWin(gameKey);
-                }
-            } catch(e) {}
-            
-            localStorage.setItem('last_won_game', gameKey);
-            localStorage.setItem('win_timestamp', Date.now());
-            let currentScore = parseInt(localStorage.getItem('points_' + gameKey)) || 0;
-            localStorage.setItem('points_' + gameKey, currentScore + 10);
-        }
-    </script>
     <style>
         :root { 
             --bg: #120024; --card: #1d003d; --yellow: #ffeb3b; 
@@ -146,6 +120,22 @@
 </div>
 
 <script>
+    // Dichiarazione globale per la comunicazione con l'hub principale
+    function triggerGameVictory(gameKey) {
+        try {
+            if (window.opener && typeof window.opener.triggerGameWin === 'function') {
+                window.opener.triggerGameWin(gameKey);
+            } else if (window.parent && typeof window.parent.triggerGameWin === 'function') {
+                window.parent.triggerGameWin(gameKey);
+            }
+        } catch(e) {}
+        
+        localStorage.setItem('last_won_game', gameKey);
+        localStorage.setItem('win_timestamp', Date.now());
+        let currentScore = parseInt(localStorage.getItem('points_' + gameKey)) || 0;
+        localStorage.setItem('points_' + gameKey, currentScore + 10);
+    }
+
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
     let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
@@ -342,6 +332,14 @@
             conn.on('data', d => { if(d.n) pX = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
         });
     }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerName = urlParams.get('player');
+        if (playerName && typeof setPlayerName === 'function') {
+            setPlayerName(playerName);
+        }
+    });
 </script>
 </body>
 </html>
