@@ -347,6 +347,19 @@ function endGame(winner) {
             setPlayerName(playerName);
         }
     });
+
+    function inviaVittoria(nomeGiocatore, punti) {
+  // 1. Invia messaggio tramite postMessage
+  if (window.opener) {
+    window.opener.postMessage({ type: 'GAME_WIN', player: nomeGiocatore, score: punti }, '*');
+  }
+  
+  // 2. Salva direttamente nel localStorage condiviso
+  let leaderboard = JSON.parse(localStorage.getItem('arcade_leaderboard')) || [];
+  leaderboard.push({ name: nomeGiocatore, score: punti, date: new Date().toISOString() });
+  localStorage.setItem('arcade_leaderboard', JSON.stringify(leaderboard));
+}
+
 </script>
 </body>
 </html>
