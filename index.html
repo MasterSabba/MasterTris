@@ -120,6 +120,27 @@
 </div>
 
 <script>
+    // 1. Recupera l'utente dall'URL
+const urlParams = new URLSearchParams(window.location.search);
+const username = urlParams.get('user');
+
+// 2. Alla vittoria, aggiorna Firebase
+function registraVittoria() {
+  if (!username) {
+    console.error("Utente non identificato dall'URL!");
+    return;
+  }
+  
+  // Esempio incremento Firebase
+  const userRef = firebase.database().ref('users/' + username);
+  userRef.transaction((user) => {
+    if (user) {
+      user.xp = (user.xp || 0) + 100;
+      user.masterblackjack_wins = (user.masterblackjack_wins || 0) + 1;
+    }
+    return user;
+  });
+}
     window.triggerGameVictory = function(gameKey) {
         try {
             if (window.opener && typeof window.opener.triggerGameWin === 'function') {
