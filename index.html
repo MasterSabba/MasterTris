@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+    <a href="https://mastersabba.github.io/MasterSabba/" target="_self" style="position: fixed; top: 10px; left: 10px; z-index: 9999; text-decoration: none; color: rgba(255, 255, 255, 0.2); font-family: sans-serif; font-size: 24px; padding: 10px; transition: color 0.3s ease;">✕</a>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tris Neon 3D</title>
@@ -60,8 +61,6 @@
 </head>
 <body>
 
-<a href="https://mastersabba.github.io/MasterSabba/" target="_self" style="position: fixed; top: 10px; left: 10px; z-index: 9999; text-decoration: none; color: rgba(255, 255, 255, 0.2); font-family: sans-serif; font-size: 24px; padding: 10px; transition: color 0.3s ease;">✕</a>
-
 <div class="container">
     <div id="result-screen" class="hidden">
         <h2 id="res-txt">HAI VINTO</h2>
@@ -120,81 +119,13 @@
 </div>
 
 <script>
-    // 1. Recupera l'utente dall'URL
-const urlParams = new URLSearchParams(window.location.search);
-const username = urlParams.get('user');
-
-// 2. Alla vittoria, aggiorna Firebase
-function registraVittoria() {
-  if (!username) {
-    console.error("Utente non identificato dall'URL!");
-    return;
-  }
-  
-  // Esempio incremento Firebase
-  const userRef = firebase.database().ref('users/' + username);
-  userRef.transaction((user) => {
-    if (user) {
-      user.xp = (user.xp || 0) + 100;
-      user.masterblackjack_wins = (user.masterblackjack_wins || 0) + 1;
-    }
-    return user;
-  });
-}
-    window.triggerGameVictory = function(gameKey) {
-        try {
-            if (window.opener && typeof window.opener.triggerGameWin === 'function') {
-                window.opener.triggerGameWin(gameKey);
-            } else if (window.parent && typeof window.parent.triggerGameWin === 'function') {
-                window.parent.triggerGameWin(gameKey);
-            }
-        } catch(e) {}
-        
-        localStorage.setItem('last_won_game', gameKey);
-        localStorage.setItem('win_timestamp', Date.now());
-        let currentScore = parseInt(localStorage.getItem('points_' + gameKey)) || 0;
-        localStorage.setItem('points_' + gameKey, currentScore + 10);
-    };
-
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
     let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
-    function setPlayerName(name) {
-        if(name) {
-            document.getElementById('nick').value = name;
-            localStorage.setItem('tris_nick', name);
-        }
-    }
-// Da inserire esclusivamente quando il giocatore umano vince la partita
-function inviaVittoriaAdArcade() {
-    const winPayload = {
-        type: 'GAME_WIN',
-        gameKey: 'master-tris' // Sostituisci con la chiave del gioco specifico
-    };
-
-    // Invia il messaggio sia alla finestra padre (se in iframe) sia alla finestra di provenienza (opener)
-    if (window.opener) {
-        window.opener.postMessage(winPayload, '*');
-    }
-    if (window.parent && window.parent !== window) {
-        window.parent.postMessage(winPayload, '*');
-    }
-}
-    function syncScoreWithHub() {
-        let arcadeData = JSON.parse(localStorage.getItem('mastersabba_arcade_v2'));
-        if (arcadeData && arcadeData.winsPerGame && arcadeData.winsPerGame['Tris Battle']) {
-            score = arcadeData.winsPerGame['Tris Battle'] * 10;
-        } else {
-            score = parseInt(localStorage.getItem('tris_score')) || 0;
-        }
-        localStorage.setItem('tris_score', score);
-        localStorage.setItem('points_mastertris', score); 
-        document.getElementById('pts').innerText = score;
-    }
-
     document.getElementById('nick').value = localStorage.getItem('tris_nick') || "";
-    let score = 0;
-    syncScoreWithHub();
+    let score = parseInt(localStorage.getItem('tris_score')) || 0;
+    localStorage.setItem('points_mastertris', score); 
+    document.getElementById('pts').innerText = score;
 
     function nav(id) {
         document.querySelectorAll('.container > div').forEach(d => { if(d.id!=='result-screen') d.classList.add('hidden'); });
@@ -202,7 +133,6 @@ function inviaVittoriaAdArcade() {
         if(id === 'p-home') {
             let currentNick = document.getElementById('nick').value.trim();
             if(currentNick) localStorage.setItem('tris_nick', currentNick);
-            syncScoreWithHub();
         }
     }
 
@@ -292,9 +222,6 @@ function inviaVittoriaAdArcade() {
             if(mode === 'local') {
                 txt.innerText = "👑 " + winName + " VINCE!";
                 txt.className = "res-win";
-                if (typeof window.triggerGameVictory === 'function') {
-                    window.triggerGameVictory('mastertris');
-                }
             } else {
                 if(winner === mySymbol) {
                     txt.innerText = "👑 HAI VINTO";
@@ -303,10 +230,6 @@ function inviaVittoriaAdArcade() {
                     localStorage.setItem('tris_score', score);
                     localStorage.setItem('points_mastertris', score); 
                     document.getElementById('pts').innerText = score;
-                    
-                    if (typeof window.triggerGameVictory === 'function') {
-                        window.triggerGameVictory('mastertris');
-                    }
                 } else {
                     txt.innerText = "HAI PERSO";
                     txt.className = "res-lose";
@@ -389,14 +312,6 @@ function inviaVittoriaAdArcade() {
             conn.on('data', d => { if(d.n) pX = d.n; if(d.i !== undefined) move(d.i); updateStatus(); });
         });
     }
-
-    window.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const playerName = urlParams.get('player');
-        if (playerName) {
-            setPlayerName(playerName);
-        }
-    });
 </script>
 </body>
 </html>
