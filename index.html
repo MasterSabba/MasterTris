@@ -148,25 +148,68 @@
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
     let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
+// --- LOGICA GESTIONE UTENTE & SCORE HUB ---
+    function getActiveUserPrefix() {
+        const sessionEmail = localStorage.getItem('currentSession') || localStorage.getItem('hub_currentUser');
+        if (sessionEmail) {
+            return sessionEmail.toLowerCase().trim() + "_";
+        }
+        return "guest_";
+    }
+
+    function saveGameScore(gameName, points, isWin = false) {
+        const prefix = getActiveUserPrefix();
+        
+        // Aggiorna Punti Locali specifici per l'utente attivo
+        const scoreKey = prefix + "points_" + gameName;
+        let currentScore = parseInt(localStorage.getItem(scoreKey) || "0");
+        let newScore = Math.max(0, currentScore + points);
+        localStorage.setItem(scoreKey, newScore);
+
+        // Mantiene la chiave generica sincronizzata con l'utente corrente
+        localStorage.setItem("points_" + gameName, newScore);
+
+        // Aggiorna Vittorie se applicabile
+        if (isWin) {
+            const winKey = prefix + "wins_" + gameName;
+            let currentWins = parseInt(localStorage.getItem(winKey) || "0");
+            localStorage.setItem(winKey, currentWins + 1);
+            localStorage.setItem("wins_" + gameName, currentWins + 1);
+        }
+
+        // Invia Notifica all'HUB (sia iframe che window popup)
+        const targetWindow = window.opener || window.parent;
+        if (targetWindow && targetWindow !== window) {
+            targetWindow.postMessage({
+                type: 'GAME_WIN',
+                gameId: gameName,
+                score: points
+            }, '*');
+        }
+
+        return newScore;
+    }
+
+    // Caricamento Punteggio e Nickname
     let userNick = localStorage.getItem('nickname') || localStorage.getItem('username') || localStorage.getItem('tris_nick') || "Player";
     document.getElementById('nick').value = userNick;
 
-    let score = parseInt(localStorage.getItem('points_mastertris')) || parseInt(localStorage.getItem('tris_score')) || 0;
-    localStorage.setItem('points_mastertris', score); 
+    // Lettura iniziale del punteggio legato al prefisso dell'utente corrente
+    const currentPrefix = getActiveUserPrefix();
+    let score = parseInt(localStorage.getItem(currentPrefix + 'points_mastertris') || localStorage.getItem('points_mastertris') || '0');
     document.getElementById('pts').innerText = score;
 
-    async function savePoints(newScore) {
-        score = newScore;
-        localStorage.setItem('points_mastertris', score);
-        localStorage.setItem('tris_score', score);
+    async function savePoints(deltaPoints, isWin = false) {
+        // Applica i punti e ottieni il totale aggiornato
+        score = saveGameScore('mastertris', deltaPoints, isWin);
         document.getElementById('pts').innerText = score;
 
+        // Sync Firestore
         let currentNick = document.getElementById('nick').value.trim() || userNick;
         try {
             await db.collection("users").doc(currentNick).set({
                 MasterTris: score
             }, { merge: true });
-            console.log("Punti MasterTris sincronizzati su Firestore per: " + currentNick);
         } catch (e) {
             console.error("Errore di scrittura database: ", e);
         }
@@ -274,11 +317,11 @@
                 if(winner === mySymbol) {
                     txt.innerText = "👑 HAI VINTO";
                     txt.className = "res-win";
-                    savePoints(score + 10);
+                    savePoints(10, true); // +10 Punti, segna vittoria
                 } else {
                     txt.innerText = "HAI PERSO";
                     txt.className = "res-lose";
-                    savePoints(Math.max(0, score - 5));
+                    savePoints(-5, false); // -5 Punti
                 }
             }
         }
@@ -350,7 +393,7 @@
         const id = document.getElementById('join-id').value.toUpperCase();
         peer = new Peer();
         peer.on('open', () => {
-            conn = peer.connect(id); role = 'guest'; role = 'guest'; mode = 'online'; mySymbol = "O";
+            conn = peer.connect(id); role = 'guest'; mode = 'online'; mySymbol = "O";
             conn.on('open', () => {
                 pO = document.getElementById('nick').value.trim() || "Guest";
                 conn.send({n: pO}); nav('p-game'); active = true; turn="X"; updateStatus();
