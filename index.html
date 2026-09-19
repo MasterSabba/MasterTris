@@ -3,32 +3,58 @@
 <head>
     <a href="https://mastersabba.github.io/MasterSabba/" target="_self" style="position: fixed; top: 10px; left: 10px; z-index: 9999; text-decoration: none; color: rgba(255, 255, 255, 0.2); font-family: sans-serif; font-size: 24px; padding: 10px; transition: color 0.3s ease;">✕</a>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Tris Neon 3D</title>
+    
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // CONFIGURAZIONE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyAs7...", 
+            authDomain: "mastersabba.firebaseapp.com",
+            projectId: "mastersabba",
+            storageBucket: "mastersabba.appspot.com",
+            messagingSenderId: "565...",
+            appId: "1:565..."
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+
     <style>
         :root { 
             --bg: #120024; --card: #1d003d; --yellow: #ffeb3b; 
             --neon-g: #39ff14; --neon-r: #ff3131; --p: #7b2cbf;
         }
 
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
         body { 
             font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #fff; 
-            display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden;
+            display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw; margin: 0; overflow: hidden;
         }
 
         .container { 
-            background: var(--card); width: 340px; padding: 30px; border-radius: 25px; text-align: center;
+            background: var(--card); width: 90%; max-width: 340px; padding: 30px; border-radius: 25px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(123, 44, 191, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1); position: relative;
         }
 
-        h1 { font-size: 2.5rem; margin-bottom: 20px; text-shadow: 0 0 10px var(--yellow); color: var(--yellow); }
+        h1 { font-size: 2.5rem; margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 10px var(--yellow); color: var(--yellow); }
         .hidden { display: none !important; pointer-events: none !important; }
 
         input { 
             width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: none;
             background: #0f001d; color: #fff; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); box-sizing: border-box;
+            text-align: center; font-weight: 600; font-size: 1rem;
         }
 
         button { 
@@ -70,7 +96,7 @@
 
     <div id="p-home">
         <h1>MASTER TRIS</h1>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti Hub: <span id="pts" style="color:var(--yellow)">0</span></div>
         <input type="text" id="nick" placeholder="Tuo Nickname">
         <button onclick="nav('p-bot')">SFIDA IL BOT</button>
         <button onclick="nav('p-multi')">MULTIPLAYER</button>
@@ -122,17 +148,39 @@
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
     let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
-    document.getElementById('nick').value = localStorage.getItem('tris_nick') || "";
-    let score = parseInt(localStorage.getItem('tris_score')) || 0;
+    let userNick = localStorage.getItem('nickname') || localStorage.getItem('username') || localStorage.getItem('tris_nick') || "Player";
+    document.getElementById('nick').value = userNick;
+
+    let score = parseInt(localStorage.getItem('points_mastertris')) || parseInt(localStorage.getItem('tris_score')) || 0;
     localStorage.setItem('points_mastertris', score); 
     document.getElementById('pts').innerText = score;
+
+    async function savePoints(newScore) {
+        score = newScore;
+        localStorage.setItem('points_mastertris', score);
+        localStorage.setItem('tris_score', score);
+        document.getElementById('pts').innerText = score;
+
+        let currentNick = document.getElementById('nick').value.trim() || userNick;
+        try {
+            await db.collection("users").doc(currentNick).set({
+                MasterTris: score
+            }, { merge: true });
+            console.log("Punti MasterTris sincronizzati su Firestore per: " + currentNick);
+        } catch (e) {
+            console.error("Errore di scrittura database: ", e);
+        }
+    }
 
     function nav(id) {
         document.querySelectorAll('.container > div').forEach(d => { if(d.id!=='result-screen') d.classList.add('hidden'); });
         document.getElementById(id).classList.remove('hidden');
         if(id === 'p-home') {
             let currentNick = document.getElementById('nick').value.trim();
-            if(currentNick) localStorage.setItem('tris_nick', currentNick);
+            if(currentNick) {
+                localStorage.setItem('tris_nick', currentNick);
+                localStorage.setItem('nickname', currentNick);
+            }
         }
     }
 
@@ -226,13 +274,11 @@
                 if(winner === mySymbol) {
                     txt.innerText = "👑 HAI VINTO";
                     txt.className = "res-win";
-                    score += 10;
-                    localStorage.setItem('tris_score', score);
-                    localStorage.setItem('points_mastertris', score); 
-                    document.getElementById('pts').innerText = score;
+                    savePoints(score + 10);
                 } else {
                     txt.innerText = "HAI PERSO";
                     txt.className = "res-lose";
+                    savePoints(Math.max(0, score - 5));
                 }
             }
         }
@@ -304,7 +350,7 @@
         const id = document.getElementById('join-id').value.toUpperCase();
         peer = new Peer();
         peer.on('open', () => {
-            conn = peer.connect(id); role = 'guest'; mode = 'online'; mySymbol = "O";
+            conn = peer.connect(id); role = 'guest'; role = 'guest'; mode = 'online'; mySymbol = "O";
             conn.on('open', () => {
                 pO = document.getElementById('nick').value.trim() || "Guest";
                 conn.send({n: pO}); nav('p-game'); active = true; turn="X"; updateStatus();
