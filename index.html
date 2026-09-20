@@ -148,17 +148,20 @@
     let board = Array(9).fill(""), turn = "X", active = false, mode = "", botDiff = "hard";
     let p1_orig = "", p2_orig = "", pX = "", pO = "", peer, conn, role, mySymbol = "X";
 
-// --- LOGICA GESTIONE UTENTE & SCORE HUB ---
+    // --- LOGICA GESTIONE UTENTE & SCORE HUB ---
+    function getCurrentUserId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('userId') || sessionStorage.getItem('masterhub_logged_user') || localStorage.getItem('masterhub_logged_user') || localStorage.getItem('currentSession') || 'guest';
+    }
+
     function getActiveUserPrefix() {
-        const sessionEmail = localStorage.getItem('currentSession') || localStorage.getItem('hub_currentUser');
-        if (sessionEmail) {
-            return sessionEmail.toLowerCase().trim() + "_";
-        }
-        return "guest_";
+        const uid = getCurrentUserId();
+        return (uid && uid !== 'guest') ? `${uid.toLowerCase().trim()}_` : "guest_";
     }
 
     function saveGameScore(gameName, points, isWin = false) {
         const prefix = getActiveUserPrefix();
+        const currentUid = getCurrentUserId();
         
         // Aggiorna Punti Locali specifici per l'utente attivo
         const scoreKey = prefix + "points_" + gameName;
@@ -175,16 +178,21 @@
             let currentWins = parseInt(localStorage.getItem(winKey) || "0");
             localStorage.setItem(winKey, currentWins + 1);
             localStorage.setItem("wins_" + gameName, currentWins + 1);
-        }
 
-        // Invia Notifica all'HUB (sia iframe che window popup)
-        const targetWindow = window.opener || window.parent;
-        if (targetWindow && targetWindow !== window) {
-            targetWindow.postMessage({
+            // Invia Notifica all'HUB solo in caso di vittoria
+            const payload = {
                 type: 'GAME_WIN',
+                gameKey: 'master-tris',
                 gameId: gameName,
-                score: points
-            }, '*');
+                points: points,
+                score: points,
+                userId: currentUid
+            };
+
+            const targetWindow = window.opener || window.parent;
+            if (targetWindow && targetWindow !== window) {
+                targetWindow.postMessage(payload, '*');
+            }
         }
 
         return newScore;
@@ -194,13 +202,16 @@
     let userNick = localStorage.getItem('nickname') || localStorage.getItem('username') || localStorage.getItem('tris_nick') || "Player";
     document.getElementById('nick').value = userNick;
 
-    // Lettura iniziale del punteggio legato al prefisso dell'utente corrente
-    const currentPrefix = getActiveUserPrefix();
-    let score = parseInt(localStorage.getItem(currentPrefix + 'points_mastertris') || localStorage.getItem('points_mastertris') || '0');
-    document.getElementById('pts').innerText = score;
+    function loadUserScore() {
+        const currentPrefix = getActiveUserPrefix();
+        let currentScore = parseInt(localStorage.getItem(currentPrefix + 'points_mastertris') || localStorage.getItem('points_mastertris') || '0');
+        document.getElementById('pts').innerText = currentScore;
+        return currentScore;
+    }
+
+    let score = loadUserScore();
 
     async function savePoints(deltaPoints, isWin = false) {
-        // Applica i punti e ottieni il totale aggiornato
         score = saveGameScore('mastertris', deltaPoints, isWin);
         document.getElementById('pts').innerText = score;
 
@@ -219,6 +230,7 @@
         document.querySelectorAll('.container > div').forEach(d => { if(d.id!=='result-screen') d.classList.add('hidden'); });
         document.getElementById(id).classList.remove('hidden');
         if(id === 'p-home') {
+            loadUserScore();
             let currentNick = document.getElementById('nick').value.trim();
             if(currentNick) {
                 localStorage.setItem('tris_nick', currentNick);
