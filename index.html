@@ -172,14 +172,13 @@
         // Mantiene la chiave generica sincronizzata con l'utente corrente
         localStorage.setItem("points_" + gameName, newScore);
 
-        // Aggiorna Vittorie se applicabile
+        // Aggiorna Vittorie e invia notifica all'HUB solo se l'utente ha vinto
         if (isWin) {
             const winKey = prefix + "wins_" + gameName;
             let currentWins = parseInt(localStorage.getItem(winKey) || "0");
             localStorage.setItem(winKey, currentWins + 1);
             localStorage.setItem("wins_" + gameName, currentWins + 1);
 
-            // Invia Notifica all'HUB solo in caso di vittoria
             const payload = {
                 type: 'GAME_WIN',
                 gameKey: 'master-tris',
@@ -329,11 +328,11 @@
                 if(winner === mySymbol) {
                     txt.innerText = "👑 HAI VINTO";
                     txt.className = "res-win";
-                    savePoints(10, true); // +10 Punti, segna vittoria
+                    savePoints(10, true);
                 } else {
                     txt.innerText = "HAI PERSO";
                     txt.className = "res-lose";
-                    savePoints(-5, false); // -5 Punti
+                    savePoints(-5, false);
                 }
             }
         }
