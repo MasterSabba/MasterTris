@@ -83,9 +83,18 @@
         .res-lose { color: var(--neon-r); text-shadow: 0 0 20px var(--neon-r); font-size: 2rem; text-transform: uppercase; }
 
         #code-box { background: #000; color: var(--neon-g); padding: 15px; border-radius: 10px; font-family: monospace; border: 1px dashed var(--neon-g); margin: 10px 0; }
+
+            .exit-button {
+            position: absolute; top: 15px; left: 20px; font-size: 2rem; line-height: 1;
+            color: var(--empty-border); text-decoration: none; z-index: 100;
+            transition: all 0.2s ease; -webkit-tap-highlight-color: transparent; font-family: Arial, sans-serif;
+        }
+        .exit-button:hover { color: var(--text-color); transform: scale(1.1); }
     </style>
 </head>
 <body>
+
+    <a href="#" onclick="window.close(); return false;" class="exit-button" title="Torna all'Hub">×</a>
 
 <div class="container">
     <div id="result-screen" class="hidden">
