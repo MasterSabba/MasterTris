@@ -13,12 +13,14 @@
     <script>
         // CONFIGURAZIONE FIREBASE
         const firebaseConfig = {
-            apiKey: "AIzaSyAs7...", 
-            authDomain: "mastersabba.firebaseapp.com",
-            projectId: "mastersabba",
-            storageBucket: "mastersabba.appspot.com",
-            messagingSenderId: "565...",
-            appId: "1:565..."
+            apiKey: "AIzaSyBxZQF5OO5-znaipaPYeFcjOARjFXO1_gc",
+  authDomain: "mastersabba-games.firebaseapp.com",
+  databaseURL: "https://mastersabba-games-default-rtdb.firebaseio.com",
+  projectId: "mastersabba-games",
+  storageBucket: "mastersabba-games.firebasestorage.app",
+  messagingSenderId: "254141019232",
+  appId: "1:254141019232:web:29702c03b91f8a76677f05",
+  measurementId: "G-775DFWZ6PC"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -186,14 +188,13 @@
             localStorage.setItem("wins_" + gameName, currentWins + 1);
         }
 
-        // Invia Notifica all'HUB (sia iframe che window popup)
-        const targetWindow = window.opener || window.parent;
-        if (targetWindow && targetWindow !== window) {
-            targetWindow.postMessage({
-                type: 'GAME_WIN',
-                gameId: gameName,
-                score: points
-            }, '*');
+        const targetWindow = window.opener || (window.parent !== window ? window.parent : null);
+if (targetWindow) {
+    targetWindow.postMessage({
+        gameKey: 'master-tris',
+        points: points
+    }, '*');
+
         }
 
         return newScore;
